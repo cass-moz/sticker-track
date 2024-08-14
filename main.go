@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo-contrib/pprof"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/spf13/viper"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.uber.org/zap"
 	"net/http"
@@ -18,6 +19,22 @@ import (
 func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
+
+	viper.SetConfigName("config")         // name of config file (without extension)
+	viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
+	viper.AddConfigPath("/etc/appname/")  // path to look for the config file in
+	viper.AddConfigPath("$HOME/.appname") // call multiple times to add many search paths
+	viper.AddConfigPath(".")              // optionally look for config in the working directory
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// Config file not found; ignore error if desired
+		} else {
+			// Config file was found but another error was produced
+		}
+	}
+
+	viper.SetDefault("PORT", "8080")
+
 	e := echo.New()
 
 	e.HideBanner = true
@@ -33,7 +50,7 @@ func main() {
 	e.GET("/sticker", sticker)
 	pprof.Register(e)
 
-	e.Logger.Fatal(e.Start(":1323"))
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%v", viper.GetInt("port"))))
 }
 
 func sticker(c echo.Context) error {
